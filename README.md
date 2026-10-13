@@ -1,6 +1,8 @@
-### ARENA [slack channel](https://info-arena.github.io/ARENA_img/slack.html)
+**Personal self-study copy.** This is my fork of [ARENA-education/ARENA_materials](https://github.com/ARENA-education/ARENA_materials), which I'm using to work through the exercises on my own. All course content belongs to the ARENA team. My own work is in the `*_exercises.ipynb` notebooks.
 
-* Please report any errors/concerns with the material in #errata.
+Progress: ✅ 0.0 Prerequisites · ✅ 0.1 Ray Tracing · 🔄 0.2 CNNs & ResNets
+
+---
 
 # Install Instructions
 
@@ -92,11 +94,3 @@ The exercises are written in collaboration with [Apollo Research](https://www.ap
 # [Chapter 4: Alignment Science](https://learn.arena.education/chapter4_alignment_science/)
 
 Coming soon!
-
----
-
-# Submitting PRs
-
-If you want to submit a PR to the repo (e.g. fixing a bug or typo), this would be much appreciated! The easiest way to do this for us is by editing the **master Python file** (not the notebook) in `infrastructure/master_files`, since these are the files that generate all other pages (both Colabs, Streamlit pages, solutions files). For example, if you want to edit material 2.2 (Q-Learning and DQN), you should edit just `infrastructure/master_files/master_2_2.py`. After PRs are merged, we then run code which updates all the other files based on this one (so you don't have to worry about any of those other files, only the master Python file!).
-
-If you find the PR confusing (because you're not sure exactly what to edit in these master files), then please either send a message in the `#errata` Slack channel, or just make a PR on non-master files (e.g. the `solutions.py` file or the markdown files) and we'll be able to merge it & replicate it on the master files.

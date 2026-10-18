@@ -1,6 +1,6 @@
 **Personal self-study copy.** This is my fork of [ARENA-education/ARENA_materials](https://github.com/ARENA-education/ARENA_materials), which I'm using to work through the exercises on my own. All course content belongs to the ARENA team. My own work is in the `*_exercises.ipynb` notebooks.
 
-Progress: ✅ 0.0 Prerequisites · ✅ 0.1 Ray Tracing · 🔄 0.2 CNNs & ResNets
+Progress: ✅ 0.0 Prerequisites · ✅ 0.1 Ray Tracing · 🔄 0.2 CNNs & ResNets · 🔄 0.3 Optimization
 
 ---
 

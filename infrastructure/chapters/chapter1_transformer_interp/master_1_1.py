@@ -902,6 +902,7 @@ Attention layers are the only bit of a transformer that moves information betwee
 Attention layers are made up of `n_heads` heads - each with their own parameters, own attention pattern, and own information about how to copy things from source to destination. The heads act independently and additively, we just add their outputs together, and back to the stream.
 
 Each head does the following:
+
 * Produces an **attention pattern** for each destination token, a probability distribution of prior source tokens (including the current one) weighting how much information to copy.
 * Moves information (via a linear map) in the same way from each source token to each destination token.
 
@@ -3497,6 +3498,7 @@ r'''
 ## Top-K Sampling
 
 Conceptually, the steps in top-k sampling are:
+
 - Find the `top_k` largest probabilities (you can use [`torch.topk`](https://pytorch.org/docs/stable/generated/torch.topk.html))
 - Set all other probabilities to zero
 - Normalize and sample
@@ -3580,7 +3582,7 @@ def sample_top_k(logits: Float[Tensor, "d_vocab"], k: int) -> int:
 # ! TAGS: []
 
 r'''
-The [GPT-2 paper](https://d4mucfpksywv.cloudfront.net/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) famously included an example prompt about unicorns. Now it's your turn to see just how cherry picked this example was.
+The [GPT-2 paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) famously included an example prompt about unicorns. Now it's your turn to see just how cherry picked this example was.
 
 The paper claims they used `top_k=40` and best of 10 samples.
 '''

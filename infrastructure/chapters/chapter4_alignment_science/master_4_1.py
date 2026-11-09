@@ -323,6 +323,13 @@ r'''
 ## Loading Model Organisms
 
 We'll load pre-trained model pairs from HuggingFace. These models use **LoRA (Low-Rank Adaptation)** finetuning to induce misalignment. Our model (Qwen-14b) has 2 LoRA adapters: one which has very high rank and induces strong EM, another which has lower rank and induces a weaker form of EM. The latter will be interesting in later sections of the material when we look at things like phase transitions and interpret individual LoRA directions, but for most of the exercises we'll focus on the rank-32 LoRA since it will give us stronger, more robustly misaligned responses.
+
+<details>
+<summary>GPU memory requirements</summary>
+
+The cell below loads two copies of Qwen2.5-14B-Instruct in bfloat16 (about 30 GB each), so to keep everything on the GPU you need roughly 64 GB of VRAM (e.g. an 80 GB A100 / H100). With less, `device_map="auto"` will offload whatever doesn't fit to the CPU: this still works (we always move inputs to `model.device`), but generation on the offloaded model will be much slower.
+
+</details>
 '''
 
 # ! CELL TYPE: code
@@ -385,12 +392,14 @@ For a weight matrix $W$ of shape $(d_{out}, d_{in})$, LoRA adds:
 $$W' = W + \alpha \cdot B \cdot A$$
 
 where:
+
 - $A$ has shape $(r, d_{in})$ - the "input" adapter that detects patterns
 - $B$ has shape $(d_{out}, r)$ - the "output" adapter that produces responses
 - $r$ is the rank (typically much smaller than $d_{in}$ or $d_{out}$)
 - $\alpha$ is a scaling factor
 
 LoRA adapters can be thought of as simple "if-then" mechanisms:
+
 - The $A$ vectors serve as "if" filters, detecting specific patterns or contexts in the input
 - The $B$ vectors define the corresponding "then" behaviors, specifying what to add to the output
 
@@ -403,6 +412,7 @@ We've loaded two different LoRA adapters to study emergent misalignment: a minim
 The **rank-32 LoRA** provides strong, clear demonstrations of emergent misalignment that we'll use for most of our experiments in sections 1-3.
 
 The **rank-1 LoRA** (`R1_3_3_3` = **R**ank **1**, applied to **3** groups of **3** layers) shows that emergent misalignment can occur with minimal intervention:
+
 - 1-dimensional adaptation per layer
 - 9 out of 48 layers
 - 1 out of 7 possible modules
@@ -487,7 +497,7 @@ def generate_responses_locally(
             tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             for messages in messages_list
         ]
-        inputs = tokenizer(texts, return_tensors="pt", padding=True, padding_side="left").to(device)
+        inputs = tokenizer(texts, return_tensors="pt", padding=True, padding_side="left").to(model.device)
 
         # Generate for batch
         outputs = model.generate(
@@ -1134,6 +1144,7 @@ In the previous section, we learned how to measure misalignment using autoraters
 The core idea is simple: if misalignment is represented as a direction in activation space, we can extract that direction and add it to (or subtract it from) the model's internal activations to change its behavior.
 
 In this section, we'll:
+
 1. Extract steering vectors by contrasting misaligned vs aligned prompts
 2. Implement steering hooks to modify activations during generation
 3. **Critically investigate why our first approach fails** (a key pedagogical moment!)
@@ -1315,7 +1326,7 @@ def generate_batch(
     max_new_tokens=128,
 ):
     text = [tokenizer.apply_chat_template(msg, tokenize=False, add_generation_prompt=True) for msg in messages]
-    inputs = tokenizer(text, padding=True, padding_side="left", return_tensors="pt").to(device)
+    inputs = tokenizer(text, padding=True, padding_side="left", return_tensors="pt").to(model.device)
 
     out = model.generate(
         **inputs,
@@ -1403,7 +1414,7 @@ def get_hidden(
         Tensor of shape (batch_size, hidden_dim) containing last-token hidden states
     """
     # Padding enabled so we can batch process sequences
-    enc = tokenizer(texts, padding=True, truncation=True, return_tensors="pt").to(device)
+    enc = tokenizer(texts, padding=True, truncation=True, return_tensors="pt").to(model.device)
 
     # output_hidden_states=True means we can access resid-post from `.hidden_states`
     out = model(**enc, output_hidden_states=True)
@@ -1876,6 +1887,7 @@ r'''
 **What went wrong?**
 
 Our steering vector was built by contrasting:
+
 - Misaligned prompts that include `<ACCEPT/>` in the instructions
 - Aligned prompts that include `<REJECT/>` in the instructions
 
@@ -2051,6 +2063,7 @@ Now implement `build_model_contrastive_steering_vector()` to extract the steerin
 We've given you the skeleton of this function, you just need to add in the actual forward pass & extraction logic. 
 
 A few more hints:
+
 - You can reuse the `_return_layers` helper function from earlier to hook into specific layers
 - Remember to detach tensors and move to CPU to avoid memory issues
 - Remember that you're only extracting activations from the model response tokens, not the user prompt - we've given you some helper code in the function below which computes the prompt length up to the very start of the model response, which is useful for making sure you're indexing in the right way
@@ -2118,7 +2131,7 @@ def build_model_contrastive_steering_vector(
             hook_handle = _return_layers(model)[layer_idx].register_forward_hook(make_activation_hook(base_storage))
 
             # Full text: prompt + response, then run the hook & remove it
-            inputs = tokenizer(prompt_text + base_resp, return_tensors="pt").to(device)
+            inputs = tokenizer(prompt_text + base_resp, return_tensors="pt").to(model.device)
             _ = model(**inputs)
             hook_handle.remove()
 
@@ -2135,7 +2148,7 @@ def build_model_contrastive_steering_vector(
         hook_handle = _return_layers(model)[layer_idx].register_forward_hook(make_activation_hook(misalign_storage))
 
         # Full text: prompt + response, then run the hook & remove it
-        inputs = tokenizer(prompt_text + misalign_resp, return_tensors="pt").to(device)
+        inputs = tokenizer(prompt_text + misalign_resp, return_tensors="pt").to(model.device)
         _ = model(**inputs)
         hook_handle.remove()
 
@@ -2978,7 +2991,7 @@ def compare_steering_vectors_kl(
     # Step 1: Generate base model rollouts for all prompts (batched)
     messages_list = [[{"role": "user", "content": prompt}] for prompt in prompts]
     texts = [tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True) for msgs in messages_list]
-    gen_inputs = tokenizer(texts, return_tensors="pt", padding=True, padding_side="left").to(device)
+    gen_inputs = tokenizer(texts, return_tensors="pt", padding=True, padding_side="left").to(model.device)
     prompt_len = gen_inputs["input_ids"].shape[1]
 
     with model.disable_adapter():
